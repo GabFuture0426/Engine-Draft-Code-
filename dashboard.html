@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grey Line Overbilling Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --light-bg: #f8f9fa;
+            --dark-bg: #343a40;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar-header {
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .sidebar-header h2 {
+            color: var(--secondary-color);
+            font-size: 1.5rem;
+        }
+        
+        .sidebar-header .subtitle {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .nav-menu {
+            list-style: none;
+        }
+        
+        .nav-menu li {
+            margin-bottom: 10px;
+        }
+        
+        .nav-menu a {
+            color: white;
+            text-decoration: none;
+            padding: 12px 15px;
+            display: block;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        
+        .nav-menu a:hover, .nav-menu a.active {
+            background-color: rgba(255,255,255,0.1);
+        }
+        
+        .nav-menu i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .main-content {
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .header h1 {
+            color: var(--primary-color);
+            font-size: 1.8rem;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background-color: var(--secondary-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card.grey-line {
+            border-left: 4px solid var(--secondary-color);
+        }
+        
+        .stat-card.revenue {
+            border-left: 4px solid var(--success-color);
+        }
+        
+        .stat-card.clients {
+            border-left: 4px solid var(--warning-color);
+        }
+        
+        .stat-card.safety {
+            border-left: 4px solid var(--danger-color);
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .recent-activity {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .activity-list {
+            list-style: none;
+        }
+        
+        .activity-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+        
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .activity-icon.grey-line {
+            background-color: var(--secondary-color);
+        }
+        
+        .activity-icon.invoice {
+            background-color: var(--success-color);
+        }
+        
+        .activity-icon.client {
+            background-color: var(--warning-color);
+        }
+        
+        .activity-details h4 {
+            margin-bottom: 5px;
+        }
+        
+        .activity-time {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-primary {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+        
+        .btn-success {
+            background-color: var(--success-color);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background-color: #219653;
+        }
+        
+        .btn-warning {
+            background-color: var(--warning-color);
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            background-color: #e67e22;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .safety-indicator {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        
+        .safety-safe {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .safety-warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .safety-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>Grey Line System</h2>
+                <div class="subtitle">Billing Intelligence Engine</div>
+                <div class="user-info" style="margin-top: 20px;">
+                    <div class="user-avatar" id="userAvatar">GL</div>
+                    <div>
+                        <div id="userName">Loading...</div>
+                        <div style="font-size: 0.8rem; opacity: 0.8;" id="userRole">Role</div>
+                    </div>
+                </div>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#" class="active" onclick="loadDashboard()">
+                    <i>📊</i> Dashboard
+                </a></li>
+                <li><a href="#" onclick="loadClients()">
+                    <i>👥</i> Clients
+                </a></li>
+                <li><a href="#" onclick="loadCalculator()">
+                    <i>🧮</i> Grey Line Calculator
+                </a></li>
+                <li><a href="#" onclick="loadInvoices()">
+                    <i>💰</i> Invoices
+                </a></li>
+                <li><a href="#" onclick="loadAnalytics()">
+                    <i>📈</i> Analytics
+                </a></li>
+                <li><a href="#" onclick="loadGeoFencing()">
+                    <i>📍</i> Geo-Fencing
+                </a></li>
+                <li><a href="#" onclick="loadSiteVisits()">
+                    <i>🏠</i> Site Visits
+                </a></li>
+                <li><a href="#" onclick="loadSettings()">
+                    <i>⚙️</i> Settings
+                </a></li>
+            </ul>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content" id="mainContent">
+            <!-- Content will be loaded dynamically -->
+        </div>
+    </div>
+    
+    <!-- Modals -->
+    <div id="greyLineCalculatorModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Grey Line Calculator</h3>
+                <button class="close-modal" onclick="closeModal('greyLineCalculatorModal')">×</button>
+            </div>
+            <div id="calculatorContent">
+                <!-- Calculator form will be loaded here -->
+            </div>
+        </div>
+    </div>
+    
+    <div id="siteVisitModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Site Visit Assessment</h3>
+                <button class="close-modal" onclick="closeModal('siteVisitModal')">×</button>
+            </div>
+            <div id="siteVisitContent">
+                <!-- Site visit form will be loaded here -->
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Global variables
+        let currentUser = {};
+        let dashboardData = {};
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserInfo();
+            loadDashboard();
+        });
+        
+        // Load user information
+        async function loadUserInfo() {
+            try {
+                const response = await axios.get('/api/v1/user/info');
+                currentUser = response.data;
+                
+                document.getElementById('userName').textContent = currentUser.name;
+                document.getElementById('userRole').textContent = currentUser.role;
+                document.getElementById('userAvatar').textContent = 
+                    currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase();
+            } catch (error) {
+                console.error('Error loading user info:', error);
+            }
+        }
+        
+        // Load dashboard view
+        async function loadDashboard() {
+            try {
+                // Update active menu
+                updateActiveMenu('dashboard');
+                
+                // Load dashboard data
+                const response = await axios.get('/api/v1/dashboard/overview');
+                dashboardData = response.data;
+                
+                // Render dashboard
+                const content = `
+                    <div class="header">
+                        <h1>Dashboard Overview</h1>
+                        <div>
+                            <button class="btn btn-primary" onclick="openGreyLineCalculator()">
+                                🧮 Calculate Grey Line
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card grey-line">
+                            <div class="stat-label">Total Grey Line Revenue</div>
+                            <div class="stat-value">$${dashboardData.statistics.grey_line_revenue.toFixed(2)}</div>
+                            <div class="stat-label">${dashboardData.statistics.grey_line_percentage.toFixed(1)}% of total revenue</div>
+                        </div>
+                        
+                        <div class="stat-card revenue">
+                            <div class="stat-label">Total Revenue</div>
+                            <div class="stat-value">$${dashboardData.statistics.total_revenue.toFixed(2)}</div>
+                            <div class="stat-label">From ${dashboardData.statistics.total_invoices} invoices</div>
+                        </div>
+                        
+                        <div class="stat-card clients">
+                            <div class="stat-label">Active Clients</div>
+                            <div class="stat-value">${dashboardData.statistics.total_clients}</div>
+                            <div class="stat-label">Managed clients</div>
+                        </div>
+                        
+                        <div class="stat-card safety">
+                            <div class="stat-label">Average Safety Score</div>
+                            <div class="stat-value">85%</div>
+                            <div class="stat-label">Grey line safety rating</div>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <h3>Grey Line Trends (Last 30 Days)</h3>
+                            <select id="trendPeriod" onchange="loadTrendsChart()">
+                                <option value="7">7 Days</option>
+                                <option value="30" selected>30 Days</option>
+                                <option value="90">90 Days</option>
+                            </select>
+                        </div>
+                        <canvas id="trendsChart"></canvas>
+                    </div>
+                    
+                    <div class="recent-activity">
+                        <h3>Recent Activity</h3>
+                        <ul class="activity-list" id="recentActivity">
+                            ${dashboardData.recent_invoices.map(invoice => `
+                                <li class="activity-item">
+                                    <div class="activity-icon invoice">💰</div>
+                                    <div class="activity-details">
+                                        <h4>Invoice ${invoice.id.slice(0, 8)}...</h4>
+                                        <p>${invoice.client_name} - $${invoice.total_amount.toFixed(2)}</p>
+                                        <div class="activity-time">Grey line: ${invoice.grey_line_hours} hours</div>
+                                    </div>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                    
+                    <div class="chart-container" style="margin-top: 20px;">
+                        <h3>Top Clients by Grey Line Usage</h3>
+                        <canvas id="topClientsChart"></canvas>
+                    </div>
+                `;
+                
+                document.getElementById('mainContent').innerHTML = content;
+                
+                // Load charts
+                setTimeout(() => {
+                    loadTrendsChart();
+                    loadTopClientsChart();
+                }, 100);
+                
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                document.getElementById('mainContent').innerHTML = `
+                    <div class="alert alert-error">
+                        Error loading dashboard: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        // Load clients view
+        async function loadClients() {
+            try {
+                updateActiveMenu('clients');
+                
+                const response = await axios.get('/api/v1/clients');
+                const clients = response.data;
+                
+                const content = `
+                    <div class="header">
+                        <h1>Clients Management</h1>
+                        <div>
+                            <button class="btn btn-success" onclick="openNewClientModal()">
+                                ＋ Add New Client
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3>All Clients</h3>
+                            <input type="text" id="clientSearch" placeholder="Search clients..." 
+                                   style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; width: 300px;"
+                                   onkeyup="filterClients()">
+                        </div>
+                        
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background-color: #f8f9fa;">
+                                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">Client</th>
+                                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">Type</th>
+                                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">Frequency</th>
+                                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">Total Cleans</th>
+                                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">Grey Line Avg</th>
+                                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clientsTableBody">
+                                ${clients.map(client => `
+                                    <tr style="border-bottom: 1px solid #eee;">
+                                        <td style="padding: 15px;">
+                                            <strong>${client.name}</strong><br>
+                                            <small style="color: #666;">${client.email || 'No email'}</small>
+                                        </td>
+                                        <td style="padding: 15px;">
+                                            <span class="safety-indicator ${client.client_type === 'commercial' ? 'safety-warning' : 'safety-safe'}">
+                                                ${client.client_type}
+                                            </span>
+                                        </td>
+                                        <td style="padding: 15px;">${client.frequency}</td>
+                                        <td style="padding: 15px;">${client.total_cleans}</td>
+                                        <td style="padding: 15px;">
+                                            ${client.avg_grey_line_minutes || 0} mins
+                                        </td>
+                                        <td style="padding: 15px;">
+                                            <button class="btn btn-primary" style="padding: 5px 10px; font-size: 0.9rem;"
+                                                    onclick="viewClientDetails('${client.id}')">
+                                                View
+                                            </button>
+                                            <button class="btn btn-warning" style="padding: 5px 10px; font-size: 0.9rem;"
+                                                    onclick="recordSiteVisit('${client.id}')">
+                                                Site Visit
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                
+                document.getElementById('mainContent').innerHTML = content;
+                
+            } catch (error) {
+                console.error('Error loading clients:', error);
+            }
+        }
+        
+        // Load calculator view
+        async function loadCalculator() {
+            try {
+                updateActiveMenu('calculator');
+                
+                const clientsResponse = await axios.get('/api/v1/clients');
+                const clients = clientsResponse.data;
+                
+                const content = `
+                    <div class="header">
+                        <h1>Grey Line Calculator</h1>
+                        <div>
+                            <button class="btn btn-primary" onclick="openGreyLineCalculator()">
+                                🧮 New Calculation
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <h3>Interactive Grey Line Calculator</h3>
+                        <p>Calculate grey line adjustments based on multiple factors</p>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px;">
+                            <div>
+                                <div class="form-group">
+                                    <label>Select Client</label>
+                                    <select id="calcClientId" class="form-select" onchange="loadClientDetails()">
+                                        <option value="">Select a client</option>
+                                        ${clients.map(client => `
+                                            <option value="${client.id}">${client.name} (${client.client_type})</option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Cleaning Frequency</label>
+                                    <select id="calcFrequency" class="form-select">
+                                        <option value="daily">Daily</option>
+                                        <option value="weekly" selected>Weekly</option>
+                                        <option value="bi-weekly">Bi-Weekly</option>
+                                        <option value="monthly">Monthly</option>
+                                        <option value="one-time">One-Time</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Base Cleaning Minutes</label>
+                                    <input type="number" id="calcBaseMinutes" class="form-control" value="120" min="30" max="480">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Special Conditions</label>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                        <label style="display: flex; align-items: center;">
+                                            <input type="checkbox" id="calcPets" value="pets">
+                                            <span style="margin-left: 5px;">Pets</span>
+                                        </label>
+                                        <label style="display: flex; align-items: center;">
+                                            <input type="checkbox" id="calcKids" value="kids">
+                                            <span style="margin-left: 5px;">Kids</span>
+                                        </label>
+                                        <label style="display: flex; align-items: center;">
+                                            <input type="checkbox" id="calcElderly" value="elderly">
+                                            <span style="margin-left: 5px;">Elderly</span>
+                                        </label>
+                                        <label style="display: flex; align-items: center;">
+                                            <input type="checkbox" id="calcSeasonal" value="seasonal">
+                                            <span style="margin-left: 5px;">Seasonal</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <div class="form-group">
+                                    <label>Dirt Level (from Site Visit)</label>
+                                    <select id="calcDirtLevel" class="form-select">
+                                        <option value="light">Light</option>
+                                        <option value="moderate" selected>Moderate</option>
+                                        <option value="heavy">Heavy</option>
+                                        <option value="severe">Severe</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Operational Factors</label>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                        <label style="display: flex; align-items: center;">
+                                            <input type="checkbox" id="calcNavigation">
+                                            <span style="margin-left: 5px;">Navigation Issues</span>
+                                        </label>
+                                        <label style="display: flex; align-items: center;">
+                                            <input type="checkbox" id="calcEquipment">
+                                            <span style="margin-left: 5px;">Equipment Prep</span>
+                                        </label>
+                                        <label style="display: flex; align-items: center;">
+                                            <input type="checkbox" id="calcWeather">
+                                            <span style="margin-left: 5px;">Weather Impact</span>
+                                        </label>
+                                        <label style="display: flex; align-items: center;">
+                                            <input type="checkbox" id="calcTaskExpansion">
+                                            <span style="margin-left: 5px;">Task Expansion</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Client Type</label>
+                                    <select id="calcClientType" class="form-select">
+                                        <option value="residential">Residential</option>
+                                        <option value="commercial">Commercial</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Client History</label>
+                                    <select id="calcClientHistory" class="form-select">
+                                        <option value="new">New Client (First Clean)</option>
+                                        <option value="returning">Returning (3-10 sessions)</option>
+                                        <option value="long-term" selected>Long-Term (10+ sessions)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button class="btn btn-success" style="width: 100%; margin-top: 20px; padding: 15px;"
+                                onclick="calculateGreyLine()">
+                            🧮 Calculate Grey Line
+                        </button>
+                        
+                        <div id="calculationResult" style="margin-top: 30px; display: none;">
+                            <!-- Results will be displayed here -->
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container" style="margin-top: 20px;">
+                        <h3>Grey Line Adjustment Matrix</h3>
+                        <p>Reference table for grey line adjustments</p>
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                            <thead>
+                                <tr style="background-color: #f8f9fa;">
+                                    <th style="padding: 10px; border: 1px solid #dee2e6;">Factor</th>
+                                    <th style="padding: 10px; border: 1px solid #dee2e6;">Condition</th>
+                                    <th style="padding: 10px; border: 1px solid #dee2e6;">Adjustment Range</th>
+                                    <th style="padding: 10px; border: 1px solid #dee2e6;">Safety Level</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;">Recurrence</td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;">Monthly</td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;">+8-10 minutes</td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;"><span class="safety-indicator safety-safe">Maximum Safe</span></td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;">Client Type</td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;">Commercial</td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;">+8-12 minutes</td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;"><span class="safety-indicator safety-safe">High</span></td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;">Site Visit</td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;">Heavy Dirt</td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;">+8-12 minutes</td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;"><span class="safety-indicator safety-safe">Safe</span></td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;">Special</td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;">Pets</td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;">+5 minutes</td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;"><span class="safety-indicator safety-safe">Very Safe</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                
+                document.getElementById('mainContent').innerHTML = content;
+                
+            } catch (error) {
+                console.error('Error loading calculator:', error);
+            }
+        }
+        
+        // Calculate grey line
+        async function calculateGreyLine() {
+            try {
+                // Collect form data
+                const formData = {
+                    client_id: document.getElementById('calcClientId').value,
+                    frequency: document.getElementById('calcFrequency').value,
+                    base_minutes: parseInt(document.getElementById('calcBaseMinutes').value) || 120,
+                    client_type: document.getElementById('calcClientType').value,
+                    client_history: document.getElementById('calcClientHistory').value,
+                    dirt_level: document.getElementById('calcDirtLevel').value,
+                    special_conditions: [],
+                    operational_factors: {
+                        has_navigation_issues: document.getElementById('calcNavigation').checked,
+                        equipment_prep_needed: document.getElementById('calcEquipment').checked,
+                        weather_impact: document.getElementById('calcWeather').checked
+                    },
+                    has_task_expansion: document.getElementById('calcTaskExpansion').checked
+                };
+                
+                // Add special conditions
+                if (document.getElementById('calcPets').checked) formData.special_conditions.push('pets');
+                if (document.getElementById('calcKids').checked) formData.special_conditions.push('kids');
+                if (document.getElementById('calcElderly').checked) formData.special_conditions.push('elderly');
+                if (document.getElementById('calcSeasonal').checked) formData.special_conditions.push('seasonal');
+                
+                // Call API
+                const response = await axios.post('/api/v1/greyline/calculate', formData);
+                const result = response.data.data;
+                
+                // Display results
+                const resultDiv = document.getElementById('calculationResult');
+                resultDiv.style.display = 'block';
+                
+                resultDiv.innerHTML = `
+                    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px;">
+                        <h3 style="color: var(--secondary-color); margin-bottom: 20px;">Grey Line Calculation Results</h3>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                            <div>
+                                <h4>Summary</h4>
+                                <p><strong>Total Grey Line Minutes:</strong> ${result.total_grey_line_minutes}</p>
+                                <p><strong>Recommended Billing Adjustment:</strong> ${result.recommended_billing_adjustment}</p>
+                                <p><strong>Safety Level:</strong> 
+                                    <span class="safety-indicator ${result.is_safe_for_client ? 'safety-safe' : 'safety-danger'}">
+                                        ${result.is_safe_for_client ? 'Safe for Client' : 'Review Needed'}
+                                    </span>
+                                </p>
+                            </div>
+                            <div>
+                                <h4>Breakdown</h4>
+                                ${Object.entries(result.breakdown).map(([key, value]) => `
+                                    <p><strong>${key.replace(/_/g, ' ').toUpperCase()}:</strong> +${value} minutes</p>
+                                `).join('')}
+                            </div>
+                        </div>
+                        
+                        <div style="background-color: white; padding: 15px; border-radius: 5px; border-left: 4px solid var(--secondary-color);">
+                            <h4>Billing Justification</h4>
+                            <p>${result.billing_justification}</p>
+                        </div>
+                        
+                        <button class="btn btn-primary" style="margin-top: 20px;"
+                                onclick="applyGreyLineToInvoice(${JSON.stringify(result).replace(/"/g, '&quot;')})">
+                            Apply to Invoice
+                        </button>
+                    </div>
+                `;
+                
+                // Scroll to results
+                resultDiv.scrollIntoView({ behavior: 'smooth' });
+                
+            } catch (error) {
+                console.error('Error calculating grey line:', error);
+                alert('Error calculating grey line: ' + error.message);
+            }
+        }
+        
+        // Load invoices view
+        async function loadInvoices() {
+            updateActiveMenu('invoices');
+            document.getElementById('mainContent').innerHTML = `
+                <div class="header">
+                    <h1>Invoices</h1>
+                    <div>
+                        <button class="btn btn-success" onclick="generateNewInvoice()">
+                            ＋ Generate Invoice
+                        </button>
+                    </div>
+                </div>
+                <p>Invoices management view will be implemented here.</p>
+            `;
+        }
+        
+        // Load analytics view
+        async function loadAnalytics() {
+            updateActiveMenu('analytics');
+            
+            try {
+                const response = await axios.get('/api/v1/analytics/grey-line-trends');
+                const analytics = response.data;
+                
+                const content = `
+                    <div class="header">
+                        <h1>Analytics & Trends</h1>
+                        <div>
+                            <select id="analyticsPeriod" onchange="loadAnalyticsData()" style="padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                                <option value="7">Last 7 Days</option>
+                                <option value="30" selected>Last 30 Days</option>
+                                <option value="90">Last 90 Days</option>
+                                <option value="365">Last Year</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+                        <div class="chart-container">
+                            <h3>Grey Line Usage Trends</h3>
+                            <canvas id="analyticsTrendsChart"></canvas>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <h3>Distribution by Client Type</h3>
+                            <canvas id="clientTypeChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container" style="margin-top: 20px;">
+                        <h3>Detailed Analytics</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div>
+                                <h4>By Frequency</h4>
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    ${analytics.by_frequency.map(item => `
+                                        <tr>
+                                            <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.frequency}</td>
+                                            <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">
+                                                ${item.avg_grey_line_minutes.toFixed(1)} mins
+                                            </td>
+                                            <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">
+                                                ${item.session_count} sessions
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </table>
+                            </div>
+                            
+                            <div>
+                                <h4>Daily Trends</h4>
+                                <div style="max-height: 300px; overflow-y: auto;">
+                                    ${analytics.daily_trends.map(item => `
+                                        <div style="padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;">
+                                            <span>${item.date}</span>
+                                            <span>${item.avg_grey_line_minutes.toFixed(1)} mins</span>
+                                            <span>${item.session_count} sessions</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('mainContent').innerHTML = content;
+                
+                // Load charts
+                setTimeout(() => {
+                    loadAnalyticsCharts(analytics);
+                }, 100);
+                
+            } catch (error) {
+                console.error('Error loading analytics:', error);
+            }
+        }
+        
+        // Load geo-fencing view
+        function loadGeoFencing() {
+            updateActiveMenu('geo-fencing');
+            document.getElementById('mainContent').innerHTML = `
+                <div class="header">
+                    <h1>Geo-Fencing Management</h1>
+                    <div>
+                        <button class="btn btn-success" onclick="addNewGeoFence()">
+                            ＋ Add Geo-Fence
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <h3>Geo-Fencing Dashboard</h3>
+                    <p>Monitor cleaner locations and geo-fence compliance</p>
+                    
+                    <div id="mapContainer" style="height: 400px; background-color: #f0f0f0; border-radius: 5px; margin: 20px 0; display: flex; align-items: center; justify-content: center;">
+                        <p>Interactive map would be displayed here with Leaflet/Google Maps integration</p>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div>
+                            <h4>Active Geo-Fences</h4>
+                            <div id="activeFencesList">
+                                <!-- Active fences will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h4>Recent Geo-Checks</h4>
+                            <div id="recentGeoChecks">
+                                <!-- Recent checks will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chart-container" style="margin-top: 20px;">
+                    <h3>Geo-Fencing Settings</h3>
+                    <div class="form-group">
+                        <label>Default Radius (meters)</label>
+                        <input type="number" id="defaultRadius" value="100" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Check Interval (minutes)</label>
+                        <input type="number" id="checkInterval" value="5" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="alertOnExit" checked>
+                            Alert on geo-fence exit
+                        </label>
+                    </div>
+                    <button class="btn btn-primary" onclick="saveGeoSettings()">Save Settings</button>
+                </div>
+            `;
+        }
+        
+        // Load site visits view
+        function loadSiteVisits() {
+            updateActiveMenu('site-visits');
+            document.getElementById('mainContent').innerHTML = `
+                <div class="header">
+                    <h1>Site Visit Assessments</h1>
+                    <div>
+                        <button cl
